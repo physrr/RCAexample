@@ -1,0 +1,36 @@
+val biofolder = Val[File]
+val subjectName = Val[String]
+val output = Val[File]
+
+
+val pyTask =
+  CARETask(
+    workDirectory / "packaged_AREG.tgz.bin",
+    "python RCA_single_image_generic_AREG.py ./atlas_reference_images_partial /images/${subjectName} ./landmarks.vtk ./config_file_filenames_ATLAS.cfg /${subjectName}"
+  ) set (
+    resources += (workDirectory / "RCA_single_image_generic_AREG.py"),
+    resources += (workDirectory / "landmarks.vtk"),
+    resources += (workDirectory / "config_file_filenames_ATLAS.cfg"),
+    resources += (workDirectory / "atlas_reference_images_partial"),
+    inputFiles += (biofolder, "/images/${subjectName}"),
+    inputs += subjectName,
+    outputFiles += ("/${subjectName}", output)
+  )
+
+val copyFolder = CopyFileHook(output, workDirectory / "results")
+
+val exploration = 
+  ExplorationTask(biofolder in (workDirectory / "images").files withName subjectName)
+
+val cx1 =
+  PBSEnvironment(
+    "rdr16",
+    "login.cx1.hpc.ic.ac.uk",
+    wallTime = 1 hour,
+    workDirectory = "/work/rdr16/omRCA",
+    memory=8000,
+    threads = 12
+    )
+	
+
+exploration -< (pyTask hook copyFolder on cx1)
